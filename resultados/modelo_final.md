@@ -22,21 +22,26 @@ Estado: X = [x, ẋ, θ, θ̇]ᵀ      Salida: y = [x, θ]
 
 ```
 A = [ 0    1        0         0 ]
-    [ 0    0     -3.6348      0 ]
+    [ 0    0     -7.4697      0 ]
     [ 0    0        0         1 ]
-    [ 0    0     50.9381      0 ]
+    [ 0    0    104.6806      0 ]
 
-B (entrada par τ [N·m]) = [0, 178.27, 0, -2117.62]ᵀ
-B (entrada PWM)         = [0, 0.6022, 0, -7.1538]ᵀ
+B (entrada par τ [N·m]) = [0, 58.570, 0, -440.142]ᵀ
+B (entrada PWM)         = [0, 0.1979, 0, -1.4869]ᵀ
 
 C = [ 1 0 0 0 ]
     [ 0 0 1 0 ]
 ```
 
+> Corregido: el modelo anterior daba +7.14 rad/s por doble conteo de M·l²
+> en `den` (I_p ya es respecto al pivote). Ver `validacion_planta.md`.
+
 ## Análisis
-- Polo inestable: +7.14 rad/s → τ_caída = 0.14 s
+- Polo inestable: +10.23 rad/s → τ_caída = 0.098 s
 - Controlable: 4/4 ✓
 - Observable: 4/4 ✓
-- τ_motor (0.060s) << τ_caída (0.14s) → cascada PID o LQR viables
+- τ_motor (0.060s) << τ_caída (0.098s) → cascada PID o LQR viables
+- Verificado experimental (data) vs teórico (Lagrangiano del paper): 0% de
+  diferencia en el polo; motor teórico vs experimental: 1.7% en K.
 
 ## Listo para diseñar el controlador (LQR / pole-placement).

@@ -32,8 +32,8 @@ PARAMS = {
     "r":   0.037,   # radio de rueda [m]                  (calibrador, 3.7 cm)
     "n":   2,       # número de ruedas
 
-    # --- FASE 2: oscilación libre (valor REAL medido, T=0.812s) ---
-    "I_p": 0.01164, # inercia del cuerpo respecto al eje [kg·m²]  (T → I_p)
+    # --- FASE 2: oscilación libre (REAL, ajuste senoide amortiguada T=0.815s) ---
+    "I_p": 0.01172, # inercia del cuerpo respecto al PIVOTE [kg·m²]  (T → I_p)
 
     # --- FASE 3: inercia de rueda ---
     # disco macizo: J_w = 0.5·m_w·r² ;  aro: J_w = m_w·r²
@@ -62,8 +62,10 @@ def construir_modelo(p):
     # Masa equivalente de ruedas incluyendo su rotación
     M_w_eq = n * (m_w + J_w / r**2)
 
-    # Denominador común
-    den = (M + M_w_eq) * (I_p + M * l**2) - (M * l)**2
+    # Denominador común = det de la matriz de masa [[P, M·l],[M·l, I_p]]
+    # OJO: I_p YA es la inercia respecto al PIVOTE (I_p = I_cm + M·l²),
+    # tal como la entrega la Fase 2.  NO se le vuelve a sumar M·l².
+    den = (M + M_w_eq) * I_p - (M * l)**2
 
     # ---- Matriz A ----
     a23 = -(M * l)**2 * g / den
@@ -77,8 +79,9 @@ def construir_modelo(p):
     ])
 
     # ---- Vector B (entrada = par τ [N·m]) ----
-    b2 =  (I_p + M * l**2 + M * l) / (den * r)
-    b4 = -(M + M_w_eq + M * l)     / (den * r)
+    # Par sobre la rueda -> fuerza F = τ/r en x ; reacción -τ sobre el cuerpo.
+    b2 =  (I_p / r + M * l)        / den
+    b4 = -(M * l / r + (M + M_w_eq)) / den
     B_tau = np.array([[0], [b2], [0], [b4]])
 
     # ---- Salidas ----
