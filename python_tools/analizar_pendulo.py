@@ -57,20 +57,78 @@ def cargar_csv(ruta):
     }
 
 
+def _filtrar(gy, fs):
+    """Filtro pasa-bajos para eliminar el ruido del giroscopio."""
+    try:
+        from scipy.signal import butter, filtfilt
+        # corte a 5 Hz (las oscilaciones del péndulo son < 3 Hz)
+        fc = 5.0
+        b, a = butter(2, fc / (fs / 2.0), btype="low")
+        return filtfilt(b, a, gy)
+    except Exception:
+        # respaldo: media móvil
+        k = 7
+        return np.convolve(gy, np.ones(k) / k, mode="same")
+
+
+def periodo_por_fft(t, gy):
+    """Periodo dominante por FFT (robusto al ruido)."""
+    gy = gy - np.mean(gy)
+    n  = len(gy)
+    dt = np.mean(np.diff(t))
+    fft = np.abs(np.fft.rfft(gy * np.hanning(n)))
+    freqs = np.fft.rfftfreq(n, dt)
+    # ignorar DC y frecuencias muy bajas (< 0.3 Hz)
+    valido = freqs > 0.3
+    if not np.any(valido):
+        return None
+    f_dom = freqs[valido][np.argmax(fft[valido])]
+    return 1.0 / f_dom if f_dom > 0 else None
+
+
 def medir_periodo(t, gy):
     """
-    Periodo por cruces por cero ascendentes de la velocidad angular.
-    T = tiempo_total / numero_de_ciclos
+    Periodo robusto: filtra el ruido, detecta cruces por cero ascendentes
+    con HISTÉRESIS (exige que la señal supere un umbral entre cruces),
+    y verifica contra la FFT. Evita los cruces falsos por ruido.
     """
-    # quitar offset (bias del giroscopio)
     gy = gy - np.mean(gy)
-    # cruces por cero ascendentes
-    cruces = np.where((gy[:-1] < 0) & (gy[1:] >= 0))[0]
+    fs = 1.0 / np.mean(np.diff(t))
+    gyf = _filtrar(gy, fs)
+
+    # umbral de histéresis: 20% de la amplitud típica
+    amp = np.percentile(np.abs(gyf), 90)
+    umbral = 0.2 * amp
+
+    # cruces por cero ascendentes con histéresis:
+    # solo cuenta si la señal bajó de -umbral antes de subir sobre +umbral
+    cruces = []
+    armado = False
+    for i in range(1, len(gyf)):
+        if gyf[i] < -umbral:
+            armado = True
+        if armado and gyf[i-1] < 0 and gyf[i] >= 0:
+            cruces.append(i)
+            armado = False
+    cruces = np.array(cruces)
+
     if len(cruces) < 2:
         return None, None, cruces
+
     t_cruces = t[cruces]
     periodos = np.diff(t_cruces)
-    T = np.mean(periodos)
+    # descartar periodos atípicos (outliers por ruido residual)
+    med = np.median(periodos)
+    buenos = periodos[(periodos > 0.5 * med) & (periodos < 1.5 * med)]
+    T = np.mean(buenos) if len(buenos) else np.mean(periodos)
+
+    # verificación cruzada con FFT
+    T_fft = periodo_por_fft(t, gy)
+    if T_fft is not None and abs(T - T_fft) / T_fft > 0.25:
+        print(f"  [AVISO] Cruces dan T={T:.3f}s pero FFT da T={T_fft:.3f}s.")
+        print(f"          Usando FFT (más robusto al ruido).")
+        T = T_fft
+
     return T, periodos, cruces
 
 
@@ -117,6 +175,20 @@ def analizar(d, M, l):
     print(f"  Frec. natural ω_n : {omega_n:.4f} rad/s")
     print(f"  Polo inestable    : ±{omega_n:.4f} rad/s  (versión base fija)")
     print(f"  τ_caída           : {1.0/omega_n:.4f} s")
+
+    # --- VALIDACIÓN FÍSICA ---
+    if l:
+        T_min = 2 * np.pi * np.sqrt(l / g)   # periodo mínimo físico (masa puntual)
+        if T < T_min:
+            print("\n  " + "!"*50)
+            print(f"  [RESULTADO IMPOSIBLE] T={T:.3f}s < T_min={T_min:.3f}s")
+            print(f"  Un péndulo con l={l}m NO puede oscilar más rápido que {T_min:.3f}s.")
+            print(f"  Causas probables:")
+            print(f"    - El detector contó cruces falsos por ruido (revisa la gráfica)")
+            print(f"    - El pivote tiene fricción del reductor (¿usaste el eje del motor?)")
+            print(f"    - l real distinto al medido")
+            print(f"  NO uses este I_p. Repite con pivote libre y suelta limpio.")
+            print("  " + "!"*50)
 
     # Amortiguamiento
     delta, zeta = medir_amortiguamiento(t, gy, cruces)
