@@ -1,0 +1,8 @@
+FASE 2 - OSCILACION LIBRE DEL PENDULO
+Generado: 2026-06-28 21:33:17.474557
+
+T = 0.462258 s
+omega_n = 13.592376 rad/s
+M = 0.71 kg
+l = 0.1 m
+I_p = 0.003770 kg*m^2
