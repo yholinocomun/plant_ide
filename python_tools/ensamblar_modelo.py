@@ -25,15 +25,16 @@ import numpy as np
 #  PARÁMETROS — reemplaza con TUS mediciones reales
 # ══════════════════════════════════════════════════════════════════
 PARAMS = {
-    # --- FASE 0: mediciones físicas ---
-    "M":   0.45,    # masa del cuerpo/péndulo [kg]        (balanza)
-    "l":   0.09,    # distancia eje ruedas → CM cuerpo [m] (equilibrio en filo)
-    "m_w": 0.05,    # masa de UNA rueda [kg]              (balanza)
-    "r":   0.034,   # radio de rueda [m]                  (calibrador)
+    # --- FASE 0: mediciones físicas (valores REALES de Yholinño) ---
+    "M":   0.710,   # masa del cuerpo/péndulo [kg]        (balanza, sin ruedas)
+    "l":   0.10,    # distancia eje ruedas → CM cuerpo [m] (equilibrio en filo)
+    "m_w": 0.095,   # masa de UNA rueda [kg]              (balanza)
+    "r":   0.037,   # radio de rueda [m]                  (calibrador, 3.7 cm)
     "n":   2,       # número de ruedas
 
     # --- FASE 2: oscilación libre ---
-    "I_p": 0.0196,  # inercia del cuerpo respecto al eje [kg·m²]  (T → I_p)
+    # PROVISIONAL: reemplazar con el valor real que dé analizar_pendulo.py
+    "I_p": 0.0071,  # inercia del cuerpo respecto al eje [kg·m²]  (T → I_p)
 
     # --- FASE 3: inercia de rueda ---
     # disco macizo: J_w = 0.5·m_w·r² ;  aro: J_w = m_w·r²
