@@ -40,10 +40,10 @@ PARAMS = {
     # disco macizo: J_w = 0.5·m_w·r² ;  aro: J_w = m_w·r²
     "J_w": None,    # si None se calcula como disco
 
-    # --- FASE 1: motor ---
-    "K":   0.055,   # ganancia ω_ss/PWM [rad/s/PWM]
-    "tau": 0.30,    # constante de tiempo [s]
-    "u_dead": 40,   # zona muerta [PWM]
+    # --- FASE 1: motor (valores REALES medidos 2026-06-28) ---
+    "K":   0.0527,  # ganancia ω_ss/PWM [rad/s/PWM]
+    "tau": 0.060,   # constante de tiempo [s]
+    "u_dead": 30,   # zona muerta [PWM]
     "V_nom":  12.0, # voltaje nominal [V]
     "w_nom":  13.93,# velocidad nominal de rueda [rad/s] (133 RPM)
     "reduccion": 74.8,
