@@ -69,9 +69,10 @@ sudo usermod -aG dialout $USER     # cerrar sesión y volver a entrar
 
 Ver comandos exactos en `GUIA_TOMA_DATOS.md`.
 
-## Sintonización de ganancias LQR (firmware control_lqr)
+## Fase 5 — Ganancias LQR de diseño
 
-Si el robot reacciona débil o vibra, ajusta k3 (θ) y k4 (θ̇):
+Ganancias `K = [k1, k2, k3, k4]` calculadas con `diseno_lqr.py` (Riccati,
+scipy) para distintos pesos de esfuerzo de control R:
 
 | R | k3 (θ) | k4 (θ̇) | Comportamiento |
 |---|--------|--------|----------------|
@@ -82,5 +83,5 @@ Si el robot reacciona débil o vibra, ajusta k3 (θ) y k4 (θ̇):
 | 0.0005| -484 | -154 | muy agresivo |
 
 Regenera con: `python3 python_tools/diseno_lqr.py --R <valor>`
-- Vibra/tiembla -> sube R (ganancias menores)
-- Reacciona débil -> baja R (ganancias mayores)
+- R mayor -> ganancias menores (control suave)
+- R menor -> ganancias mayores (control agresivo)
