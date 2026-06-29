@@ -5,6 +5,23 @@
 
 ---
 
+## Tus parámetros medidos (Fase 0)
+
+| Símbolo | Valor | Qué es | Origen |
+|---------|-------|--------|--------|
+| M | 0.710 kg | masa del cuerpo (sin ruedas) | balanza |
+| m_w | 0.095 kg | masa de una rueda | balanza |
+| r | 0.037 m | radio de rueda | regla |
+| l | 0.10 m | eje → centro de masa | equilibrio en filo |
+| PPR | 1945 | pulsos por vuelta | 13 CPR × 2 × 74.8 |
+
+Pendientes de medir en los experimentos:
+- **K, τ, u_dead** → Fase 1 (motor)
+- **I_p** → Fase 2 (péndulo)
+- **J_w** → Fase 3 (calculado: ½·m_w·r², automático en el script)
+
+---
+
 ## Concepto clave: el encoder solo cuenta pulsos
 
 El encoder **NO mide posición ni velocidad**. Solo genera pulsos al girar, y el ESP32 los cuenta.
@@ -75,7 +92,7 @@ Cada comando: abre el puerto, manda la señal, captura, guarda el CSV en
 **Firmware:** flashea `firmware/exp2_pendulo/exp2_pendulo.ino`, cierra Arduino IDE.
 
 ```bash
-python3 python_tools/analizar_pendulo.py --port /dev/ttyACM0 --duracion 15 --M 0.45 --l 0.09
+python3 python_tools/analizar_pendulo.py --port /dev/ttyACM0 --duracion 15 --M 0.710 --l 0.10
 ```
 
 Cuando el script diga **">>> Suelta el cuerpo AHORA <<<"**, desplaza el
@@ -85,6 +102,23 @@ cuerpo 5–8° y suéltalo sin empujar. Déjalo oscilar.
 > Mídelos antes (balanza + equilibrio en un filo).
 
 **Resultado:** periodo `T` → inercia `I_p`.
+
+---
+
+## FASE 3 — Inercia de la rueda (J_w)
+
+**No necesita firmware ni toma de datos.** `J_w` se calcula con una fórmula
+a partir de la masa y el radio de la rueda (que ya mediste en Fase 0):
+
+```
+Rueda tipo DISCO macizo:  J_w = ½ · m_w · r²
+Rueda tipo ARO:           J_w = m_w · r²
+```
+
+Con tus valores (disco): `J_w = 0.5 × 0.095 × 0.037² ≈ 0.000065 kg·m²`
+
+Esto ya está automatizado dentro de `ensamblar_modelo.py` (con `"J_w": None`
+lo calcula como disco). No tienes que hacer nada manual.
 
 ---
 
