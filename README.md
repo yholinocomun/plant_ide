@@ -68,3 +68,19 @@ sudo usermod -aG dialout $USER     # cerrar sesión y volver a entrar
 ```
 
 Ver comandos exactos en `GUIA_TOMA_DATOS.md`.
+
+## Sintonización de ganancias LQR (firmware control_lqr)
+
+Si el robot reacciona débil o vibra, ajusta k3 (θ) y k4 (θ̇):
+
+| R | k3 (θ) | k4 (θ̇) | Comportamiento |
+|---|--------|--------|----------------|
+| 0.01  | -114 | -35  | suave |
+| 0.005 | -158 | -49  | medio |
+| 0.002 | -246 | -77  | recomendado (por defecto) |
+| 0.001 | -345 | -109 | agresivo |
+| 0.0005| -484 | -154 | muy agresivo |
+
+Regenera con: `python3 python_tools/diseno_lqr.py --R <valor>`
+- Vibra/tiembla -> sube R (ganancias menores)
+- Reacciona débil -> baja R (ganancias mayores)

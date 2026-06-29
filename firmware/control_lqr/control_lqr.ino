@@ -59,11 +59,12 @@ const unsigned long DT_US = 10000;
 // ---------------- GANANCIAS LQR ----------------
 // (theta en rad, x en m)  u = -(k1*x + k2*xd + k3*th + k4*thd)
 // PRIMERA PRUEBA: solo ángulo (k1=k2=0) porque los encoders aún no cuentan.
-// Ganancias agresivas (diseno_lqr.py --R 0.0005) para vencer la zona muerta.
+// Ganancias RECOMENDADAS (diseno_lqr.py --R 0.002). Sube/baja k3,k4 segun
+// la tabla del README si vibra (bajar) o si es debil (subir).
 const float k1 = 0.0;       // x        (desactivado hasta arreglar encoders)
 const float k2 = 0.0;       // x_dot    (desactivado)
-const float k3 = -484.61;   // theta
-const float k4 = -154.06;   // theta_dot
+const float k3 = -246.00;   // theta
+const float k4 = -77.28;    // theta_dot
 
 // Si el robot empeora la caída en vez de corregir, pon -1.0 aquí
 const float INVERTIR_CONTROL = 1.0;
@@ -168,16 +169,13 @@ void loop() {
     u_pwm = constrain(u_pwm, -PWM_MAX, PWM_MAX);
     u_pwm = compensarZonaMuerta(u_pwm);
 
-    // 5) Seguridad por caída
-    if (fabs(th) > ANGULO_CAIDA) {
-      control_on = false;
-      moverMotores(0);
-      Serial.println("# CAIDA -> control OFF");
-    }
+    // 5) Seguridad NO trabante: apaga la salida mientras esta caido,
+    //    se re-activa solo al volver a poner el robot derecho.
+    bool fuera_de_rango = (fabs(th) > ANGULO_CAIDA);
 
     // 6) Aplicar
-    if (control_on) moverMotores(u_pwm);
-    else            moverMotores(0);
+    if (control_on && !fuera_de_rango) moverMotores(u_pwm);
+    else                               { moverMotores(0); u_pwm = 0; }
 
     // 7) Telemetría (cada 100 ms)
     static int cnt = 0;
