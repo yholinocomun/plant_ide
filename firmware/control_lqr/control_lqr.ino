@@ -58,10 +58,12 @@ const unsigned long DT_US = 10000;
 
 // ---------------- GANANCIAS LQR ----------------
 // (theta en rad, x en m)  u = -(k1*x + k2*xd + k3*th + k4*thd)
-const float k1 = -1.0000;   // x
-const float k2 = -6.5460;   // x_dot
-const float k3 = -20.7926;  // theta
-const float k4 = -4.5256;   // theta_dot
+// PRIMERA PRUEBA: solo ángulo (k1=k2=0) porque los encoders aún no cuentan.
+// Ganancias agresivas (diseno_lqr.py --R 0.0005) para vencer la zona muerta.
+const float k1 = 0.0;       // x        (desactivado hasta arreglar encoders)
+const float k2 = 0.0;       // x_dot    (desactivado)
+const float k3 = -484.61;   // theta
+const float k4 = -154.06;   // theta_dot
 
 // Si el robot empeora la caída en vez de corregir, pon -1.0 aquí
 const float INVERTIR_CONTROL = 1.0;
