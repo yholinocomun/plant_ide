@@ -32,9 +32,8 @@ PARAMS = {
     "r":   0.037,   # radio de rueda [m]                  (calibrador, 3.7 cm)
     "n":   2,       # número de ruedas
 
-    # --- FASE 2: oscilación libre ---
-    # PROVISIONAL: reemplazar con el valor real que dé analizar_pendulo.py
-    "I_p": 0.0071,  # inercia del cuerpo respecto al eje [kg·m²]  (T → I_p)
+    # --- FASE 2: oscilación libre (valor REAL medido, T=0.812s) ---
+    "I_p": 0.01164, # inercia del cuerpo respecto al eje [kg·m²]  (T → I_p)
 
     # --- FASE 3: inercia de rueda ---
     # disco macizo: J_w = 0.5·m_w·r² ;  aro: J_w = m_w·r²
