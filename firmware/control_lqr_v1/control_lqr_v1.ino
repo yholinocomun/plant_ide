@@ -153,12 +153,18 @@ void loop() {
     int u_pwm = constrain((int)u, -PWM_MAX, PWM_MAX);
     if (USAR_ZONA_MUERTA) u_pwm = compensarZonaMuerta(u_pwm);
 
-    // 4) Seguridad
-    if (fabs(th) > ANGULO_CAIDA) { control_on = false; moverMotores(0); }
+    // 4) Seguridad NO trabante: si pasa el ángulo de caída, apaga la
+    //    salida PERO no desactiva el control; se re-activa solo al
+    //    volver a poner el robot derecho (ideal para pruebas de banco).
+    bool fuera_de_rango = (fabs(th) > ANGULO_CAIDA);
 
     // 5) Aplicar
-    if (control_on) moverMotores(u_pwm);
-    else            { moverMotores(0); u_pwm = 0; }
+    if (control_on && !fuera_de_rango) {
+      moverMotores(u_pwm);
+    } else {
+      moverMotores(0);
+      u_pwm = 0;
+    }
 
     // 6) Telemetría CSV (cada 20 ms para no saturar)
     static int cnt = 0;
