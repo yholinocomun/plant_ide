@@ -83,7 +83,9 @@ float x = 0.0, x_dot = 0.0;          // [m], [m/s]
 float theta_prev = 0.0;
 
 unsigned long t_prev_us = 0;
-bool control_on = false;
+// Arranca ACTIVO (como el código PID): los motores se manejan desde el inicio.
+// Usa 'T' para apagar y 'S' para reactivar.
+bool control_on = true;
 
 // ---------------- PROTOTIPOS ----------------
 void initMPU();
