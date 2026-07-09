@@ -1,5 +1,5 @@
 /*  BALANCE LQG - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
-    Observador de Kalman (4 estados) + u=-K x_est.  Teclas: space z o i g f t */
+    Observador de Kalman (4 estados) + u=-K x_est.  Teclas: space z(fijo) o i g f t */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -12,7 +12,7 @@ float K[4]={ -70.71,-196.97,-1985.22,-284.52 };
 const float Ad[4][4]={{1,0.01,-0.000373,0},{0,1,-0.074697,-0.000373},{0,0,1.005234,0.01},{0,0,1.046806,1.005234}};
 const float Bd[4]={0.000002,0.000316,-0.000012,-0.002376};
 const float Lk[4][2]={{0.515267,-0.000429},{1.558156,-0.065012},{-0.000643,0.463548},{-0.02667,2.358773}};
-float inv=1.0,gyroSign=-1.0,setpoint=0.0; bool usePos=false,control_on=false;
+float inv=1.0,gyroSign=-1.0,setpoint=-0.10; bool usePos=false,control_on=false;
 volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0,xh[4]={0,0,0,0},u_prev=0;
 bool telem=false; unsigned long t0t=0; int tdiv=0; const int TELEM_CADA=2;
 void IRAM_ATTR isrIzq(){ if(digitalRead(encIzqB))encIzq++; else encIzq--; }
@@ -33,12 +33,12 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();
- Serial.println("LQG listo. space z o i g f t=telemetria");}
+ Serial.println("LQG listo. space z(fijo) o i g f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on)parar();Serial.println(control_on?">>ON":">>OFF");}
-  else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
+  else if(c=='z'){Serial.print("setpoint FIJO=");Serial.println(setpoint,2);}
   else if(c=='o')usePos=!usePos; else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;
   else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("lqg");} else Serial.println("# fin");}
   else if(c=='f'){Serial.print("LQG set=");Serial.println(setpoint,2);} }

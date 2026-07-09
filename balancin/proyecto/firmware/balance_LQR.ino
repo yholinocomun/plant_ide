@@ -1,6 +1,6 @@
 /*  BALANCE LQR (pre-gain) - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
     u = Kang_p*theta + Kang_d*theta_d (+ posicion).  Ganancias validadas en HW.
-    Teclas: space z p/P d/D o i g f  t=telemetria */
+    Teclas: space z(fijo) p/P d/D o i g f  t=telemetria */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -33,12 +33,12 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();
- Serial.println("LQR listo. space z p/P d/D o i g f t=telemetria");}
+ Serial.println("LQR listo. space z(fijo) p/P d/D o i g f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on)parar();Serial.println(control_on?">>ON":">>OFF");}
-  else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
+  else if(c=='z'){Serial.print("setpoint FIJO=");Serial.println(setpoint,2);}
   else if(c=='p')Kang_p-=0.5; else if(c=='P')Kang_p+=0.5;
   else if(c=='d')Kang_d-=0.1; else if(c=='D')Kang_d+=0.1;
   else if(c=='o')usePos=!usePos; else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;

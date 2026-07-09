@@ -3,7 +3,7 @@
     Operadores fraccionarios por Grunwald-Letnikov (memoria corta L):
       I^lam e = h^lam  * sum c_I[j]*e[k-j] ;  D^mu e = h^-mu * sum c_D[j]*e[k-j]
       c[0]=1, c[j]=c[j-1]*(1-(alpha+1)/j)   (alpha=-lam integral, alpha=mu deriv)
-    Teclas: space z p/P i_/I d/D o(sign) g r f  t=telemetria */
+    Teclas: space z(fijo) p/P i_/I d/D o(sign) g r f  t=telemetria */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -42,12 +42,12 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();initGL();
- Serial.println("FOPID listo. space z p/P I/i D/d g r f t=telemetria");}
+ Serial.println("FOPID listo. space z(fijo) p/P I/i D/d g r f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on){parar();for(int j=0;j<L;j++)ebuf[j]=0;}Serial.println(control_on?">>ON":">>OFF");}
-  else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
+  else if(c=='z'){Serial.print("setpoint FIJO=");Serial.println(setpoint,2);}
   else if(c=='p')Kp-=1; else if(c=='P')Kp+=1;
   else if(c=='i')Ki-=0.5; else if(c=='I')Ki+=0.5;
   else if(c=='d')Kd-=0.2; else if(c=='D')Kd+=0.2;

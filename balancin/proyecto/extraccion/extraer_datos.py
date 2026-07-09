@@ -42,12 +42,11 @@ leer_un_rato(3)                                 # muestra 'Calib...' y 'Listo'
 ser.reset_input_buffer()
 
 if not a.no_activar:
-    if not a.auto: input("\n[1] Pon el robot VERTICAL y presiona ENTER para fijar el trim (z)...")
-    enviar('z'); time.sleep(0.3); leer_un_rato(0.5)
-    if not a.auto: input("[2] SUJETALO en equilibrio y presiona ENTER para ACTIVAR motores (space)...")
+    # setpoint es FIJO en el firmware (-0.10): NO se envia 'z'
+    if not a.auto: input("\n[1] SUJETA el robot en equilibrio y presiona ENTER para ACTIVAR motores (space)...")
     enviar(' '); time.sleep(0.3); leer_un_rato(0.5)
 
-print(f"\n[3] Iniciando TELEMETRIA y grabando {a.seg}s... (deja que controle)")
+print(f"\n[2] Iniciando TELEMETRIA y grabando {a.seg}s... (deja que controle)")
 enviar('t'); time.sleep(0.2); ser.reset_input_buffer()
 filas=[]; t0=time.time()
 while time.time()-t0<a.seg:

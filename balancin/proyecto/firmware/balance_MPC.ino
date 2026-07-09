@@ -1,5 +1,5 @@
 /*  BALANCE MPC / LQR-PREDICTIVO - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
-    u = -Kmpc*x (estados medidos; Kmpc = Riccati horizonte finito). Teclas: space z o i g f t */
+    u = -Kmpc*x (estados medidos; Kmpc = Riccati horizonte finito). Teclas: space z(fijo) o i g f t */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -9,7 +9,7 @@ const int SDA_PIN=21,SCL_PIN=47,MPU_ADDR=0x68,freq=30000,resolution=8;
 const float dt=0.010,R2D=57.29578,ANG_CAIDA=35.0; const unsigned long DT_US=10000;
 const int U_DEAD=30,PWM_MIN=3,PWM_MAX=255;
 float Kmpc[4]={ -1.395,-8.131,-1414.19,-197.57 };
-float inv=1.0,gyroSign=-1.0,setpoint=0.0; bool usePos=false,control_on=false;
+float inv=1.0,gyroSign=-1.0,setpoint=-0.10; bool usePos=false,control_on=false;
 volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0;
 bool telem=false; unsigned long t0t=0; int tdiv=0; const int TELEM_CADA=2;
 void IRAM_ATTR isrIzq(){ if(digitalRead(encIzqB))encIzq++; else encIzq--; }
@@ -30,12 +30,12 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();
- Serial.println("MPC listo. space z o i g f t=telemetria");}
+ Serial.println("MPC listo. space z(fijo) o i g f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on)parar();Serial.println(control_on?">>ON":">>OFF");}
-  else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
+  else if(c=='z'){Serial.print("setpoint FIJO=");Serial.println(setpoint,2);}
   else if(c=='o')usePos=!usePos; else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;
   else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("mpc");} else Serial.println("# fin");}
   else if(c=='f'){Serial.print("MPC set=");Serial.println(setpoint,2);} }
