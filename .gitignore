@@ -1,5 +1,9 @@
-data/*.csv
+
 plots/*.png
 __pycache__/
 *.pyc
 .DS_Store
+
+# VS Code
+.vscode/
+**/.vscode/
