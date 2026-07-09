@@ -41,6 +41,11 @@ def f_fopid(x,st):
     cI,cD=st["cI"][:len(buf)],st["cD"][:len(buf)]; bb=np.array(buf)
     I=(dt**lam)*np.sum(cI*bb); Dv=(dt**-mu)*np.sum(cD*bb)
     I=np.clip(I,-200,200); return G["Kp"]*e+G["Ki"]*I+G["Kd"]*Dv
+def f_cascada(x,st):
+    al=10.2314; k2=-20.33; kc=1.19; G=g["cascada"]["ganancias"]["CASGAIN"]
+    th=x[2]; thd=x[3]; e1=-th
+    st["I1"]=float(np.clip(st.get("I1",0)+e1*dt,-2,2))
+    v=kc*(e1+al*st["I1"]); w=thd+al*th; return G*(k2*(v-w))
 def f_hinf(x,st):
     num=np.array([-9644.251425,14377.850121,4271.651618,-14402.416908,5348.033021])
     den=np.array([1.0,-1.024125,-0.727214,1.035496,-0.261415]); HG=g["hinf"]["ganancias"]["HGAIN"]
@@ -49,7 +54,7 @@ def f_hinf(x,st):
     u=(np.dot(num,eb)-np.dot(den[1:],ub[:4]))/den[0]; ub.insert(0,u); ub.pop()
     return HG*u
 
-for slug,fn in [("lqr",f_lqr),("lqg",f_lqg),("mpc",f_mpc),("imc",f_imc),("fopid",f_fopid),("hinf",f_hinf)]:
+for slug,fn in [("lqr",f_lqr),("lqg",f_lqg),("mpc",f_mpc),("imc",f_imc),("fopid",f_fopid),("hinf",f_hinf),("cascada",f_cascada)]:
     d,estable=sim(fn); m=calcular(d); m.update({"controlador":slug,"nombre":g[slug]["nombre"],"tipo":"SIM","estable_sim":bool(estable)})
     json.dump(m,open(os.path.join(res,f"{slug}_SIM.json"),"w"),indent=2,ensure_ascii=False)
     print(f"{g[slug]['nombre']:22} SIM: estable={estable}  thetaRMS={m['theta_RMS_deg']:.2f}  |u|max={m['u_max_abs_pwm']:.0f}")

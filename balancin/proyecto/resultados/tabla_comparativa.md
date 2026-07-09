@@ -8,3 +8,4 @@
 | LQR predictivo (MPC) | 0.835 | — | 123.4 | — | sí | — |
 | IMC (filtro Q) | 0.649 | — | 117.8 | — | sí | — |
 | H-infinito | 23.123 | — | 255.0 | — | no | — |
+| Cascada (colocacion polos) | 0.869 | — | 81.9 | — | sí | — |

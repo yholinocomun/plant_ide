@@ -19,5 +19,8 @@ CTRL = {
  "hinf":  {"nombre":"H-infinito", "color":"#8c564b",
            "ganancias":{"orden":6,"HGAIN":0.10,"C_ctrl":"x (salida 1)"},
            "diseno":"augw(W1,W2,W3)+hinfsyn -> controlador dinamico orden 6"},
+    "cascada":{"nombre":"Cascada (colocacion polos)", "color":"#17becf",
+           "ganancias":{"K2":-20.33,"KC":1.19,"alpha":10.2314,"CASGAIN":4.0,"T22":0.05,"T11":0.50},
+           "diseno":"cascada corregida: PI externo (cancela polo estable) + P interno estabiliza P2"},
 }
 COLS = ["t_ms","theta_deg","theta_dot_dps","x_m","x_dot_ms","u_pwm","setpoint_deg","modo"]
