@@ -1,5 +1,8 @@
-/*  BALANCE MPC / LQR-PREDICTIVO - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
-    u = -Kmpc*x (estados medidos; Kmpc = Riccati horizonte finito). Teclas: space z o i g f t */
+/*  BALANCE H-INFINITO - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
+    Controlador dinamico discreto K(z) (IIR) sobre el error de angulo (rad):
+      u[k] = (SUM num[i]*e[k-i] - SUM den[j]*u[k-j]) / den[0]
+    Coeficientes de balancin/data/coeficientes_discretos.txt (Tustin dt=10ms).
+    HGAIN escala la salida.  Teclas: space z p/P h/H i g r f t */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -8,8 +11,11 @@ const int encIzqA=4,encIzqB=5,encDerA=6,encDerB=7; const float PPR=1945.0,R_RUED
 const int SDA_PIN=21,SCL_PIN=47,MPU_ADDR=0x68,freq=30000,resolution=8;
 const float dt=0.010,R2D=57.29578,ANG_CAIDA=35.0; const unsigned long DT_US=10000;
 const int U_DEAD=30,PWM_MIN=3,PWM_MAX=255;
-float Kmpc[4]={ -1.395,-8.131,-1414.19,-197.57 };
-float inv=1.0,gyroSign=-1.0,setpoint=0.0; bool usePos=false,control_on=false;
+#define NB 5
+const float num[NB]={ -9644.251425,14377.850121,4271.651618,-14402.416908,5348.033021 };
+const float den[NB]={ 1.0,-1.024125,-0.727214,1.035496,-0.261415 };
+float ebuf[NB]={0},ubuf[NB]={0}; float HGAIN=0.10;
+float inv=1.0,gyroSign=-1.0,setpoint=0.0; bool control_on=false;
 volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0;
 bool telem=false; unsigned long t0t=0; int tdiv=0; const int TELEM_CADA=2;
 void IRAM_ATTR isrIzq(){ if(digitalRead(encIzqB))encIzq++; else encIzq--; }
@@ -30,28 +36,33 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();
- Serial.println("MPC listo. space z o i g f t=telemetria");}
+ Serial.println("H-inf listo. space z p/P h/H i g r f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
-  if(c==' '){control_on=!control_on;if(!control_on)parar();Serial.println(control_on?">>ON":">>OFF");}
+  if(c==' '){control_on=!control_on;if(!control_on){parar();for(int i=0;i<NB;i++){ebuf[i]=0;ubuf[i]=0;}}Serial.println(control_on?">>ON":">>OFF");}
   else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
-  else if(c=='o')usePos=!usePos; else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;
-  else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("mpc");} else Serial.println("# fin");}
-  else if(c=='f'){Serial.print("MPC set=");Serial.println(setpoint,2);} }
+  else if(c=='p'){HGAIN-=0.01;if(HGAIN<0)HGAIN=0;} else if(c=='P')HGAIN+=0.01;
+  else if(c=='h'){HGAIN-=0.002;if(HGAIN<0)HGAIN=0;} else if(c=='H')HGAIN+=0.002;
+  else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;
+  else if(c=='r'){for(int i=0;i<NB;i++){ebuf[i]=0;ubuf[i]=0;}}
+  else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("hinf");} else Serial.println("# fin");}
+  else if(c=='f'){Serial.print("HGAIN=");Serial.println(HGAIN,4);} }
  unsigned long now=micros(); if(now-t_ant<DT_US)return; t_ant=now;
  float aa,gr;leer(aa,gr);float gy=gyroSign*(gr-gyroBias); ang=0.98f*(ang+gy*dt)+0.02f*aa;
- float theta_deg=ang-setpoint, theta_dot=gy, th=theta_deg/R2D, thd=gy/R2D;
+ float theta_deg=ang-setpoint, theta_dot=gy;
  long enc=(encIzq+encDer)/2; float x=(enc/PPR)*2*M_PI*R_RUEDA, x_dot=(x-x_prev)/dt; x_prev=x;
  int pwm=0;
  if(fabs(theta_deg)<=ANG_CAIDA && control_on){
-   float u=-(Kmpc[2]*th+Kmpc[3]*thd); if(usePos)u+=-(Kmpc[0]*x+Kmpc[1]*x_dot);
-   u*=inv; pwm=(int)constrain(u,-PWM_MAX,PWM_MAX);
+   float e=-theta_deg/R2D;                           // error de angulo [rad]
+   for(int i=NB-1;i>0;i--){ebuf[i]=ebuf[i-1];ubuf[i]=ubuf[i-1];} ebuf[0]=e;
+   float u=0; for(int i=0;i<NB;i++)u+=num[i]*ebuf[i]; for(int j=1;j<NB;j++)u-=den[j]*ubuf[j]; u/=den[0];
+   ubuf[0]=u; u*=inv*HGAIN; pwm=(int)constrain(u,-PWM_MAX,PWM_MAX);
    setMot(enableAPin,motorAPin1,motorAPin2,pwm); setMot(enableBPin,motorBPin1,motorBPin2,pwm);
- } else parar();
+ } else {parar(); for(int i=0;i<NB;i++){ebuf[i]=0;ubuf[i]=0;}}
  if(telem && ++tdiv>=TELEM_CADA){tdiv=0;
    Serial.print(millis()-t0t);Serial.print(',');Serial.print(theta_deg,2);Serial.print(',');
    Serial.print(theta_dot,1);Serial.print(',');Serial.print(x,4);Serial.print(',');
    Serial.print(x_dot,3);Serial.print(',');Serial.print(pwm);Serial.print(',');
-   Serial.print(setpoint,2);Serial.print(',');Serial.println(usePos?1:0);}
+   Serial.print(setpoint,2);Serial.print(',');Serial.println(0);}
 }

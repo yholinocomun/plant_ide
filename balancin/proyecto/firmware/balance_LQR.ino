@@ -1,5 +1,6 @@
-/*  BALANCE MPC / LQR-PREDICTIVO - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
-    u = -Kmpc*x (estados medidos; Kmpc = Riccati horizonte finito). Teclas: space z o i g f t */
+/*  BALANCE LQR (pre-gain) - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
+    u = Kang_p*theta + Kang_d*theta_d (+ posicion).  Ganancias validadas en HW.
+    Teclas: space z p/P d/D o i g f  t=telemetria */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -8,9 +9,11 @@ const int encIzqA=4,encIzqB=5,encDerA=6,encDerB=7; const float PPR=1945.0,R_RUED
 const int SDA_PIN=21,SCL_PIN=47,MPU_ADDR=0x68,freq=30000,resolution=8;
 const float dt=0.010,R2D=57.29578,ANG_CAIDA=35.0; const unsigned long DT_US=10000;
 const int U_DEAD=30,PWM_MIN=3,PWM_MAX=255;
-float Kmpc[4]={ -1.395,-8.131,-1414.19,-197.57 };
-float inv=1.0,gyroSign=-1.0,setpoint=0.0; bool usePos=false,control_on=false;
+// --- GANANCIAS (HW) ---
+float Kang_p=59.50,Kang_d=1.70,Kpos_p=30.36,Kpos_d=61.09,setpoint=-0.10;
+float inv=1.0,gyroSign=-1.0; bool usePos=false,control_on=false;
 volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0;
+// --- telemetria ---
 bool telem=false; unsigned long t0t=0; int tdiv=0; const int TELEM_CADA=2;
 void IRAM_ATTR isrIzq(){ if(digitalRead(encIzqB))encIzq++; else encIzq--; }
 void IRAM_ATTR isrDer(){ if(digitalRead(encDerB))encDer++; else encDer--; }
@@ -30,23 +33,26 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();
- Serial.println("MPC listo. space z o i g f t=telemetria");}
+ Serial.println("LQR listo. space z p/P d/D o i g f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on)parar();Serial.println(control_on?">>ON":">>OFF");}
   else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
+  else if(c=='p')Kang_p-=0.5; else if(c=='P')Kang_p+=0.5;
+  else if(c=='d')Kang_d-=0.1; else if(c=='D')Kang_d+=0.1;
   else if(c=='o')usePos=!usePos; else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;
-  else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("mpc");} else Serial.println("# fin");}
-  else if(c=='f'){Serial.print("MPC set=");Serial.println(setpoint,2);} }
+  else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("lqr");} else Serial.println("# fin");}
+  else if(c=='f'){Serial.print("Kang_p=");Serial.print(Kang_p,2);Serial.print(" Kang_d=");Serial.println(Kang_d,2);} }
  unsigned long now=micros(); if(now-t_ant<DT_US)return; t_ant=now;
  float aa,gr;leer(aa,gr);float gy=gyroSign*(gr-gyroBias); ang=0.98f*(ang+gy*dt)+0.02f*aa;
- float theta_deg=ang-setpoint, theta_dot=gy, th=theta_deg/R2D, thd=gy/R2D;
+ float theta_deg=ang-setpoint, theta_dot=gy;
  long enc=(encIzq+encDer)/2; float x=(enc/PPR)*2*M_PI*R_RUEDA, x_dot=(x-x_prev)/dt; x_prev=x;
  int pwm=0;
  if(fabs(theta_deg)<=ANG_CAIDA && control_on){
-   float u=-(Kmpc[2]*th+Kmpc[3]*thd); if(usePos)u+=-(Kmpc[0]*x+Kmpc[1]*x_dot);
-   u*=inv; pwm=(int)constrain(u,-PWM_MAX,PWM_MAX);
+   float u_ang=Kang_p*theta_deg+Kang_d*theta_dot;
+   float u_pos=usePos?-(Kpos_p*x+Kpos_d*x_dot):0.0f;
+   float u=inv*(u_ang+u_pos); pwm=(int)constrain(u,-PWM_MAX,PWM_MAX);
    setMot(enableAPin,motorAPin1,motorAPin2,pwm); setMot(enableBPin,motorBPin1,motorBPin2,pwm);
  } else parar();
  if(telem && ++tdiv>=TELEM_CADA){tdiv=0;

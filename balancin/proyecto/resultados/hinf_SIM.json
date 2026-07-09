@@ -1,0 +1,16 @@
+{
+  "duracion_s": 0.53,
+  "theta_RMS_deg": 23.123,
+  "theta_std_deg": 14.456,
+  "theta_max_abs_deg": 58.194,
+  "theta_medio_deg": 25.892,
+  "u_max_abs_pwm": 255.0,
+  "u_RMS_pwm": 111.6,
+  "saturacion_pct": 3.7,
+  "deriva_x_m": 0.0,
+  "muestras": 54,
+  "controlador": "hinf",
+  "nombre": "H-infinito",
+  "tipo": "SIM",
+  "estable_sim": false
+}

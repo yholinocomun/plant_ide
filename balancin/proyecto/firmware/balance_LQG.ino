@@ -1,5 +1,5 @@
-/*  BALANCE MPC / LQR-PREDICTIVO - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
-    u = -Kmpc*x (estados medidos; Kmpc = Riccati horizonte finito). Teclas: space z o i g f t */
+/*  BALANCE LQG - ESP32-S3 core 3.x - ESTANDAR + TELEMETRIA
+    Observador de Kalman (4 estados) + u=-K x_est.  Teclas: space z o i g f t */
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
@@ -8,9 +8,12 @@ const int encIzqA=4,encIzqB=5,encDerA=6,encDerB=7; const float PPR=1945.0,R_RUED
 const int SDA_PIN=21,SCL_PIN=47,MPU_ADDR=0x68,freq=30000,resolution=8;
 const float dt=0.010,R2D=57.29578,ANG_CAIDA=35.0; const unsigned long DT_US=10000;
 const int U_DEAD=30,PWM_MIN=3,PWM_MAX=255;
-float Kmpc[4]={ -1.395,-8.131,-1414.19,-197.57 };
+float K[4]={ -70.71,-196.97,-1985.22,-284.52 };
+const float Ad[4][4]={{1,0.01,-0.000373,0},{0,1,-0.074697,-0.000373},{0,0,1.005234,0.01},{0,0,1.046806,1.005234}};
+const float Bd[4]={0.000002,0.000316,-0.000012,-0.002376};
+const float Lk[4][2]={{0.515267,-0.000429},{1.558156,-0.065012},{-0.000643,0.463548},{-0.02667,2.358773}};
 float inv=1.0,gyroSign=-1.0,setpoint=0.0; bool usePos=false,control_on=false;
-volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0;
+volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0,xh[4]={0,0,0,0},u_prev=0;
 bool telem=false; unsigned long t0t=0; int tdiv=0; const int TELEM_CADA=2;
 void IRAM_ATTR isrIzq(){ if(digitalRead(encIzqB))encIzq++; else encIzq--; }
 void IRAM_ATTR isrDer(){ if(digitalRead(encDerB))encDer++; else encDer--; }
@@ -30,25 +33,28 @@ void setup(){Serial.begin(115200);delay(400);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
  Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();
- Serial.println("MPC listo. space z o i g f t=telemetria");}
+ Serial.println("LQG listo. space z o i g f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on)parar();Serial.println(control_on?">>ON":">>OFF");}
   else if(c=='z'){setpoint=ang;Serial.print("set=");Serial.println(setpoint,2);}
   else if(c=='o')usePos=!usePos; else if(c=='i')inv=-inv; else if(c=='g')gyroSign=-gyroSign;
-  else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("mpc");} else Serial.println("# fin");}
-  else if(c=='f'){Serial.print("MPC set=");Serial.println(setpoint,2);} }
+  else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("lqg");} else Serial.println("# fin");}
+  else if(c=='f'){Serial.print("LQG set=");Serial.println(setpoint,2);} }
  unsigned long now=micros(); if(now-t_ant<DT_US)return; t_ant=now;
  float aa,gr;leer(aa,gr);float gy=gyroSign*(gr-gyroBias); ang=0.98f*(ang+gy*dt)+0.02f*aa;
- float theta_deg=ang-setpoint, theta_dot=gy, th=theta_deg/R2D, thd=gy/R2D;
+ float theta_deg=ang-setpoint, theta_dot=gy, th=theta_deg/R2D;
  long enc=(encIzq+encDer)/2; float x=(enc/PPR)*2*M_PI*R_RUEDA, x_dot=(x-x_prev)/dt; x_prev=x;
+ // observador Kalman: predecir + corregir
+ float xp[4]; for(int i=0;i<4;i++){xp[i]=Bd[i]*u_prev; for(int j=0;j<4;j++)xp[i]+=Ad[i][j]*xh[j];}
+ float e0=x-xp[0], e1=th-xp[2]; for(int i=0;i<4;i++)xh[i]=xp[i]+Lk[i][0]*e0+Lk[i][1]*e1;
  int pwm=0;
  if(fabs(theta_deg)<=ANG_CAIDA && control_on){
-   float u=-(Kmpc[2]*th+Kmpc[3]*thd); if(usePos)u+=-(Kmpc[0]*x+Kmpc[1]*x_dot);
-   u*=inv; pwm=(int)constrain(u,-PWM_MAX,PWM_MAX);
+   float u=-(K[2]*xh[2]+K[3]*xh[3]); if(usePos)u+=-(K[0]*xh[0]+K[1]*xh[1]);
+   u*=inv; u_prev=u; pwm=(int)constrain(u,-PWM_MAX,PWM_MAX);
    setMot(enableAPin,motorAPin1,motorAPin2,pwm); setMot(enableBPin,motorBPin1,motorBPin2,pwm);
- } else parar();
+ } else {parar(); u_prev=0;}
  if(telem && ++tdiv>=TELEM_CADA){tdiv=0;
    Serial.print(millis()-t0t);Serial.print(',');Serial.print(theta_deg,2);Serial.print(',');
    Serial.print(theta_dot,1);Serial.print(',');Serial.print(x,4);Serial.print(',');

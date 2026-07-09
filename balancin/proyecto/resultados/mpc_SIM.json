@@ -1,0 +1,16 @@
+{
+  "duracion_s": 3.99,
+  "theta_RMS_deg": 0.835,
+  "theta_std_deg": 0.0,
+  "theta_max_abs_deg": 5.0,
+  "theta_medio_deg": 0.0,
+  "u_max_abs_pwm": 123.4,
+  "u_RMS_pwm": 9.1,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": 0.0,
+  "muestras": 400,
+  "controlador": "mpc",
+  "nombre": "LQR predictivo (MPC)",
+  "tipo": "SIM",
+  "estable_sim": true
+}
