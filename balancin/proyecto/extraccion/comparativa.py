@@ -19,5 +19,16 @@ for slug in C.CTRL:
         f"{g(h,'u_max_abs_pwm')} | {('sí' if s and s.get('estable_sim') else 'no') if s else '—'} | {g(h,'saturacion_pct')} |"
     print(row); lines.append(row)
 open(os.path.join(res,"tabla_comparativa.md"),"w").write("# Comparativa sim vs hardware\n\n"+"\n".join(lines)+"\n")
-# figura comparativa de theta (HW si existe, si no SIM) - se rellena al tener data
-print("\n-> resultados/tabla_comparativa.md")
+# --- figura comparativa de theta(t) en HARDWARE (todos los que tengan CSV) ---
+import glob as _g
+plt.figure(figsize=(11,5)); hay=False
+for slug in C.CTRL:
+    cs=sorted(_g.glob(os.path.join(res,f"{slug}_2*.csv")))
+    if not cs: continue
+    d=np.loadtxt(cs[-1],delimiter=",",skiprows=1); t=(d[:,0]-d[0,0])/1000
+    plt.plot(t,d[:,1],label=C.CTRL[slug]["nombre"],color=C.CTRL[slug]["color"],lw=1.2); hay=True
+if hay:
+    plt.axhline(0,ls="--",c="k",alpha=.4); plt.xlabel("t [s]"); plt.ylabel("theta [deg]")
+    plt.title("Comparativa de controladores - angulo (hardware)"); plt.legend(ncol=2,fontsize=8)
+    plt.savefig(os.path.join(res,"comparativa_theta_hw.png")); print("-> comparativa_theta_hw.png")
+print("-> resultados/tabla_comparativa.md")
