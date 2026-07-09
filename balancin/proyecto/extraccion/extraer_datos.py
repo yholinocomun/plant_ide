@@ -36,13 +36,13 @@ def leer_un_rato(seg,mostrar=True):
 def enviar(k): ser.write(k.encode())
 
 print(f"\n=== EXTRACCION [{info['nombre']}]  puerto {a.port} ===")
-time.sleep(2)                                   # arranque de la placa
-print(">> Esperando arranque/calibracion del robot (mensajes del firmware):")
-leer_un_rato(3)                                 # muestra 'Calib...' y 'Listo'
+time.sleep(1.5)                                 # arranque de la placa (SIN calibracion)
+print(">> Esperando arranque del robot (ya calibrado, sin espera de 2s):")
+leer_un_rato(1.0)
 ser.reset_input_buffer()
 
 if not a.no_activar:
-    # setpoint es FIJO en el firmware (-0.10): NO se envia 'z'
+    # cero y setpoint FIJOS (calibracion en el firmware): NO se envia z
     if not a.auto: input("\n[1] SUJETA el robot en equilibrio y presiona ENTER para ACTIVAR motores (space)...")
     enviar(' '); time.sleep(0.3); leer_un_rato(0.5)
 

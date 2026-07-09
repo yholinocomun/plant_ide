@@ -7,6 +7,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <math.h>
+// ====== CALIBRACION FIJA (robot ya calibrado en su cero; SIN espera de 2s) ======
+const float GYRO_BIAS_FIJO   = 0.461259f;   // bias fijo del gyro Y [deg/s]
+const float ANGULO_CERO_FIJO = 0.162628f;   // lectura del accel en el cero fisico [deg]
+const float SETPOINT_FIJO    = 0.0f;        // trim de equilibrio relativo al cero [deg]
 const int enableAPin=13,motorAPin1=12,motorAPin2=14, enableBPin=9,motorBPin1=10,motorBPin2=11;
 const int encIzqA=4,encIzqB=5,encDerA=6,encDerB=7; const float PPR=1945.0,R_RUEDA=0.037;
 const int SDA_PIN=21,SCL_PIN=47,MPU_ADDR=0x68,freq=30000,resolution=8;
@@ -14,12 +18,12 @@ const float dt=0.010,R2D=57.29578,ANG_CAIDA=35.0; const unsigned long DT_US=1000
 const int U_DEAD=30,PWM_MIN=3,PWM_MAX=255;
 // --- GANANCIAS FOPID (HW) ---
 float Kp=45.0,Ki=12.0,Kd=2.5; const float LAMBDA=0.95, MU=0.15;
-float setpoint=-0.10, inv=1.0, gyroSign=-1.0; bool control_on=false;
+float inv=1.0, gyroSign=-1.0; bool control_on=false;
 const float I_CLAMP=200.0;                 // anti-windup del termino fraccionario
 // --- Grunwald-Letnikov ---
 #define L 64
 float cI[L], cD[L], ebuf[L]; float hlam, hmu_;
-volatile long encIzq=0,encDer=0; float gyroBias=0,ang=0,x_prev=0;
+volatile long encIzq=0,encDer=0; float ang=0,x_prev=0;
 bool telem=false; unsigned long t0t=0; int tdiv=0; const int TELEM_CADA=2;
 void IRAM_ATTR isrIzq(){ if(digitalRead(encIzqB))encIzq++; else encIzq--; }
 void IRAM_ATTR isrDer(){ if(digitalRead(encDerB))encDer++; else encDer--; }
@@ -28,7 +32,7 @@ void leer(float&a,float&g){Wire.beginTransmission(MPU_ADDR);Wire.write(0x3B);Wir
  Wire.requestFrom(MPU_ADDR,14,true);int16_t ax=Wire.read()<<8|Wire.read(),ay=Wire.read()<<8|Wire.read(),az=Wire.read()<<8|Wire.read();
  Wire.read();Wire.read();Wire.read();Wire.read();int16_t gy=Wire.read()<<8|Wire.read();Wire.read();Wire.read();
  a=atan2f((float)ax,(float)az)*R2D;g=(float)gy/131.0f;}
-void calib(){Serial.println("Calib giro 2s QUIETO");float s=0;for(int i=0;i<200;i++){float a2,g;leer(a2,g);s+=g;delay(10);}gyroBias=s/200;float a2,g;leer(a2,g);ang=a2;}
+
 void setMot(int en,int i1,int i2,int pwm){int m=abs(pwm);if(m<PWM_MIN){ledcWrite(en,0);return;}bool f=pwm>=0;m+=U_DEAD;if(m>PWM_MAX)m=PWM_MAX;digitalWrite(i1,f?HIGH:LOW);digitalWrite(i2,f?LOW:HIGH);ledcWrite(en,m);}
 void parar(){ledcWrite(enableAPin,0);ledcWrite(enableBPin,0);}
 void telemHdr(const char*s){Serial.print("# CONTROLADOR=");Serial.print(s);Serial.println(" dt=0.01");
@@ -41,13 +45,13 @@ void setup(){Serial.begin(115200);delay(400);
  ledcAttach(enableAPin,freq,resolution);ledcAttach(enableBPin,freq,resolution);
  pinMode(encIzqA,INPUT_PULLUP);pinMode(encIzqB,INPUT_PULLUP);pinMode(encDerA,INPUT_PULLUP);pinMode(encDerB,INPUT_PULLUP);
  attachInterrupt(digitalPinToInterrupt(encIzqA),isrIzq,RISING);attachInterrupt(digitalPinToInterrupt(encDerA),isrDer,RISING);
- Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);calib();initGL();
+ Wire.begin(SDA_PIN,SCL_PIN);Wire.setClock(400000);initMPU();delay(100);{float a0,g0;leer(a0,g0);ang=a0;}initGL();
  Serial.println("FOPID listo. space z(fijo) p/P I/i D/d g r f t=telemetria");}
 unsigned long t_ant=0;
 void loop(){
  if(Serial.available()){char c=Serial.read();
   if(c==' '){control_on=!control_on;if(!control_on){parar();for(int j=0;j<L;j++)ebuf[j]=0;}Serial.println(control_on?">>ON":">>OFF");}
-  else if(c=='z'){Serial.print("setpoint FIJO=");Serial.println(setpoint,2);}
+  else if(c=='z'){Serial.println("# cero y SETPOINT_FIJO FIJOS en el codigo");}
   else if(c=='p')Kp-=1; else if(c=='P')Kp+=1;
   else if(c=='i')Ki-=0.5; else if(c=='I')Ki+=0.5;
   else if(c=='d')Kd-=0.2; else if(c=='D')Kd+=0.2;
@@ -56,12 +60,12 @@ void loop(){
   else if(c=='t'){telem=!telem; if(telem){t0t=millis();telemHdr("fopid");} else Serial.println("# fin");}
   else if(c=='f'){Serial.print("Kp=");Serial.print(Kp,1);Serial.print(" Ki=");Serial.print(Ki,1);Serial.print(" Kd=");Serial.print(Kd,1);Serial.print(" lam=");Serial.print(LAMBDA);Serial.print(" mu=");Serial.println(MU);} }
  unsigned long now=micros(); if(now-t_ant<DT_US)return; t_ant=now;
- float aa,gr;leer(aa,gr);float gy=gyroSign*(gr-gyroBias); ang=0.98f*(ang+gy*dt)+0.02f*aa;
- float theta_deg=ang-setpoint, theta_dot=gy;
+ float aa,gr;leer(aa,gr);float gy=gyroSign*(gr-GYRO_BIAS_FIJO); ang=0.98f*(ang+gy*dt)+0.02f*aa;
+ float theta_deg=(ang-ANGULO_CERO_FIJO)-SETPOINT_FIJO, theta_dot=gy;
  long enc=(encIzq+encDer)/2; float x=(enc/PPR)*2*M_PI*R_RUEDA, x_dot=(x-x_prev)/dt; x_prev=x;
  int pwm=0;
  if(fabs(theta_deg)<=ANG_CAIDA && control_on){
-   float e=theta_deg;                              // error (setpoint es el equilibrio)
+   float e=theta_deg;                              // error (SETPOINT_FIJO es el equilibrio)
    for(int j=L-1;j>0;j--)ebuf[j]=ebuf[j-1]; ebuf[0]=e;
    float Iterm=0,Dterm=0; for(int j=0;j<L;j++){Iterm+=cI[j]*ebuf[j]; Dterm+=cD[j]*ebuf[j];}
    Iterm*=hlam; Dterm*=hmu_;
@@ -73,5 +77,5 @@ void loop(){
    Serial.print(millis()-t0t);Serial.print(',');Serial.print(theta_deg,2);Serial.print(',');
    Serial.print(theta_dot,1);Serial.print(',');Serial.print(x,4);Serial.print(',');
    Serial.print(x_dot,3);Serial.print(',');Serial.print(pwm);Serial.print(',');
-   Serial.print(setpoint,2);Serial.print(',');Serial.println(0);}
+   Serial.print(SETPOINT_FIJO,2);Serial.print(',');Serial.println(0);}
 }
