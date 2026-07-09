@@ -1,0 +1,247 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+\graphicspath{{figs/}{./}}
+
+% Comandos de apoyo (evitan errores: \vect y \mat)
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+
+\begin{document}
+
+\title{Comparaci\'on de estrategias de control para un veh\'iculo uniaxial tipo p\'endulo invertido sobre dos ruedas\\
+{\footnotesize Implementaci\'on experimental en ESP32-S3}
+\thanks{Trabajo desarrollado para el curso de Control de Procesos.}
+}
+
+\author{
+\IEEEauthorblockN{1\textsuperscript{er} Nombre Apellido}
+\IEEEauthorblockA{\textit{Ingenier\'ia Mecatr\'onica} \\
+\textit{Universidad}\\
+Ciudad, Pa\'is \\
+correo@universidad.edu.pe}
+\and
+\IEEEauthorblockN{2\textsuperscript{do} Nombre Apellido}
+\IEEEauthorblockA{\textit{Ingenier\'ia Mecatr\'onica} \\
+\textit{Universidad}\\
+Ciudad, Pa\'is \\
+correo@universidad.edu.pe}
+}
+
+\maketitle
+
+\begin{abstract}
+Se presenta el modelado, dise\~no e implementaci\'on experimental de seis
+estrategias de control para estabilizar un veh\'iculo uniaxial tipo robot
+balanc\'in, modelado como un p\'endulo invertido sobre dos ruedas. Sobre una
+misma planta identificada en espacio de estados (polo inestable en
+$+10.23~\mathrm{rad/s}$) se dise\~naron controladores LQR, LQG, control en
+cascada por colocaci\'on de polos, PID de orden fraccionario (FOPID), control
+robusto por modelo interno (IMC) y control $H_\infty$. Todos se implementaron en
+un microcontrolador ESP32-S3 a $100~\mathrm{Hz}$ y se compararon con criterios de
+estabilidad, valor RMS del \'angulo, sobrepaso y esfuerzo de control, usando data
+experimental extra\'ida en lazo cerrado. Los seis controladores estabilizan el
+robot con error angular sub-grado; el control en cascada corregido obtuvo el
+mejor desempe\~no ($\theta_{RMS}=0.19^\circ$) con el menor esfuerzo de control.
+\end{abstract}
+
+\begin{IEEEkeywords}
+robot balanc\'in, p\'endulo invertido, espacio de estados, LQR, LQG, control
+$H_\infty$, PID fraccionario, IMC, ESP32.
+\end{IEEEkeywords}
+
+\section{Introducci\'on}
+El p\'endulo invertido sobre dos ruedas es un sistema de referencia en control por
+su car\'acter inestable, no lineal y subactuado. El objetivo de control es
+mantener el cuerpo vertical ($\theta=0$) mediante el par de los motores. En lazo
+abierto ese equilibrio es inestable, por lo que se requiere realimentaci\'on capaz
+de corregir r\'apidamente las desviaciones angulares.
+
+Este trabajo compara seis t\'ecnicas de control moderno y robusto aplicadas a una
+\emph{misma} planta e implementadas en el \emph{mismo} hardware, de modo que las
+diferencias observadas se atribuyan al controlador y no a la plataforma. Se
+reportan tanto la simulaci\'on como la respuesta experimental, y se discute la
+correspondencia entre ambas.
+
+\section{Modelo en Espacio de Estados}
+El estado es $\vect{x}=[x,\ \dot{x},\ \theta,\ \dot{\theta}]^\top$ (posici\'on,
+velocidad lineal, \'angulo y velocidad angular) y la entrada $u$ es el PWM del
+motor. La planta linealizada alrededor de la vertical es
+\begin{equation}
+\dot{\vect{x}}=\mat{A}\vect{x}+\mat{B}u,\qquad \vect{y}=\mat{C}\vect{x},
+\end{equation}
+\begin{equation}
+\mat{A}=\begin{bmatrix}0&1&0&0\\0&0&-7.4697&0\\0&0&0&1\\0&0&104.6806&0\end{bmatrix},\
+\mat{B}=\begin{bmatrix}0\\0.1979\\0\\-1.4869\end{bmatrix},
+\end{equation}
+\begin{equation}
+\mat{C}=\begin{bmatrix}1&0&0&0\\0&0&1&0\end{bmatrix},\qquad \mat{D}=\vect{0}.
+\end{equation}
+Los par\'ametros f\'isicos se obtuvieron por identificaci\'on experimental (masa,
+longitud al centro de masa, inercia por oscilaci\'on libre y constantes del
+motor). El polo inestable es $s=+\sqrt{104.6806}=+10.23~\mathrm{rad/s}$. El
+sistema es \textbf{controlable} y \textbf{observable} ($\mathrm{rango}=4$). La
+ganancia real del actuador result\'o $\approx 6$ veces menor que la nominal de
+placa, factor considerado en el dise\~no.
+
+\section{Dise\~no de los Controladores}
+\subsection{LQR (Regulador Lineal Cuadr\'atico)}
+Minimiza $J=\int_0^\infty(\vect{x}^\top\mat{Q}\vect{x}+u^\top\!Ru)\,dt$ con ley
+$u=-\mat{K}\vect{x}$, $\mat{K}=R^{-1}\mat{B}^\top\mat{P}$ y $\mat{P}$ soluci\'on de
+la ecuaci\'on de Riccati. Las matrices de peso se fijaron por la \emph{regla de
+Bryson}, $Q_{ii}=1/x_{i,\max}^2$, $R=1/u_{\max}^2$, obteniendo
+$\mat{Q}=\mathrm{diag}(100,\,4,\,32.8,\,0.41)$ y $R=2.5\times10^{-5}$. Esto da
+polos de lazo cerrado $\{-34.6,\,-8.95,\,-2.57\pm1.81j\}$ ($\zeta=0.82$).
+
+\subsection{LQG (LQR + Filtro de Kalman)}
+Combina la realimentaci\'on LQR con un observador \'optimo,
+$\dot{\hat{\vect{x}}}=\mat{A}\hat{\vect{x}}+\mat{B}u+\mat{L}(\vect{y}-\mat{C}\hat{\vect{x}})$,
+$u=-\mat{K}\hat{\vect{x}}$, donde $\mat{L}$ se obtiene de la ecuaci\'on de Riccati
+dual con covarianzas de proceso y medida. Se emple\'o
+$\mat{K}=[-70.7,\,-197,\,-1985,\,-284]$ y $\mat{L}\in\mathbb{R}^{4\times2}$
+discretizado a $10~\mathrm{ms}$.
+
+\subsection{Control en Cascada por Colocaci\'on de Polos}
+La planta angular $G_p(s)=b/(s^2-a)$ se separa en $P_2=b/(s-\alpha)$ (inestable) y
+$P_1=1/(s+\alpha)$ (estable), $\alpha=\sqrt{a}$. \emph{El m\'etodo cl\'asico de
+cancelaci\'on cancela el polo inestable con un cero del controlador, lo que hace
+al lazo internamente inestable} (modo oculto en $+\alpha$). Se corrigi\'o
+conservando la estructura de cascada y las constantes de tiempo
+($T_{22}=0.05$, $T_{11}=0.5$), pero \emph{estabilizando} el polo: la se\~nal
+interna $w=\dot\theta+\alpha\theta$ realimenta un lazo interno proporcional
+($k_2=-20.3$) y un lazo externo PI ($k_c=1.19$) cancela solo el polo estable.
+
+\subsection{PID de Orden Fraccionario (FOPID)}
+Controlador $C(s)=K_p+K_i s^{-\lambda}+K_d s^{\mu}$ con
+$K_p=45$, $K_i=12$ ($\lambda=0.95$), $K_d=2.5$ ($\mu=0.15$). Los operadores
+fraccionarios se implementaron por la definici\'on de Gr\"unwald--Letnikov con
+memoria finita, lo que evita librer\'ias externas en el microcontrolador.
+
+\subsection{Control Robusto por Modelo Interno (IMC)}
+Sobre la planta estabilizada se aplica un controlador con filtro $Q$ de primer
+orden. La forma pr\'actica implementada es un PD suavizado,
+$u_{ref}=K_{ang}\theta+K_{gyro}\dot\theta$ y
+$u(k)=u(k{-}1)+\beta\,[u_{ref}-u(k{-}1)]$, con $\beta=\Delta t/(\lambda+\Delta t)$,
+$K_{ang}=43.5$, $K_{gyro}=3.1$, $\lambda=0.010~\mathrm{s}$.
+
+\subsection{Control $H_\infty$ (Sensibilidad Mixta)}
+Se minimiza $\|T_{zw}\|_\infty$ sobre la planta aumentada
+$P=\mathrm{augw}(G,W_1,W_2,W_3)$ con ponderadores de desempe\~no, esfuerzo y
+robustez, resolviendo con \texttt{hinfsyn}. El controlador din\'amico resultante
+se discretiz\'o (Tustin, $10~\mathrm{ms}$) y se ejecut\'o como ecuaci\'on en
+diferencias, con ganancia global de ajuste $H_{gain}=0.10$.
+
+\section{Implementaci\'on en Hardware}
+La plataforma usa un ESP32-S3, IMU MPU6050 (\'angulo por filtro complementario
+$0.98/0.02$ y velocidad angular por giroscopio), encoders de cuadratura
+($1945~\mathrm{ppr}$) y puente H a $100~\mathrm{Hz}$. La calibraci\'on del cero es
+fija (bias de giroscopio y \'angulo de equilibrio constantes) para reproducibilidad.
+Cada controlador comparte el mismo esqueleto (pines, filtro, seguridad,
+compensaci\'on de zona muerta) y difiere s\'olo en la ley de control. La data
+experimental se extrajo por telemetr\'ia serial a $50~\mathrm{Hz}$ en formato
+uniforme, permitiendo un an\'alisis id\'entico para los seis casos.
+
+\section{Resultados}
+La Tabla~\ref{tab:param} resume los par\'ametros principales de cada controlador.
+La Tabla~\ref{tab:comp} compara el desempe\~no en simulaci\'on y en hardware. La
+Fig.~\ref{fig:comparativa} muestra el \'angulo $\theta(t)$ de los seis en el
+robot real, y la Fig.~\ref{fig:individuales} la respuesta individual de cada uno.
+
+\begin{table}[htbp]
+\caption{Par\'ametros principales por controlador}
+\label{tab:param}
+\begin{center}\footnotesize
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Controlador} & \textbf{Par\'ametros clave} \\
+\hline
+LQR & $K_{ang,p}=59.5$, $K_{ang,d}=1.7$ (Bryson) \\
+LQG & $\mat{K}=[-70.7,-197,-1985,-284]$, obs.\ Kalman \\
+Cascada & $k_2=-20.3$, $k_c=1.19$, $\alpha=10.23$ \\
+FOPID & $K_p=45$, $K_i=12$, $K_d=2.5$, $\lambda=0.95$, $\mu=0.15$ \\
+IMC & $K_{ang}=43.5$, $K_{gyro}=3.1$, $\lambda=0.010$ \\
+$H_\infty$ & controlador din\'amico, $H_{gain}=0.10$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Comparaci\'on de desempe\~no (simulaci\'on vs.\ hardware)}
+\label{tab:comp}
+\begin{center}\footnotesize
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Ctrl.} & $\theta_{RMS}^{sim}$ & $\theta_{RMS}^{HW}$ & $|\theta|_{max}^{HW}$ & $|u|_{max}^{HW}$ & Est.\ sim \\
+ & [$^\circ$] & [$^\circ$] & [$^\circ$] & [PWM] & \\
+\hline
+LQR      & 0.52 & 0.234 & 1.09 & 83 & s\'i \\
+LQG      & 0.79 & 0.728 & 2.00 & 26 & s\'i \\
+Cascada  & 0.87 & \textbf{0.189} & 0.94 & 32 & s\'i \\
+FOPID    & 21.2 & 0.356 & 1.06 & 53 & no \\
+IMC      & 0.65 & 0.326 & 1.08 & 43 & s\'i \\
+$H_\infty$ & 23.1 & 0.297 & 1.07 & 61 & no \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=0.48\textwidth]{comparativa.png}}
+\caption{\'Angulo $\theta(t)$ de los seis controladores en hardware.}
+\label{fig:comparativa}
+\end{figure}
+
+\begin{figure*}[htbp]
+\centering
+\begin{minipage}{0.32\textwidth}\includegraphics[width=\textwidth]{lqr.png}\\ \centering (a) LQR\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\includegraphics[width=\textwidth]{lqg.png}\\ \centering (b) LQG\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\includegraphics[width=\textwidth]{cascada.png}\\ \centering (c) Cascada\end{minipage}
+
+\vspace{2mm}
+\begin{minipage}{0.32\textwidth}\includegraphics[width=\textwidth]{fopid.png}\\ \centering (d) FOPID\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\includegraphics[width=\textwidth]{imc.png}\\ \centering (e) IMC\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\includegraphics[width=\textwidth]{hinf.png}\\ \centering (f) $H_\infty$\end{minipage}
+\caption{Respuesta experimental individual de cada controlador ($\theta$, posici\'on y esfuerzo de control).}
+\label{fig:individuales}
+\end{figure*}
+
+\section{Discusi\'on}
+Los seis controladores estabilizan el robot con $\theta_{RMS}<0.75^\circ$, sin
+saturaci\'on de actuador. El \textbf{control en cascada corregido} logr\'o el mejor
+desempe\~no ($0.19^\circ$) con el menor esfuerzo ($|u|_{max}=32$), seguido de LQR
+y $H_\infty$. El LQG present\'o el mayor error, atribuible al retardo del
+observador frente a estados que ya son medibles directamente.
+
+La correspondencia simulaci\'on--hardware es alta para LQR, LQG, IMC y cascada
+(mismo orden de magnitud). En cambio, FOPID y $H_\infty$ \emph{no estabilizan el
+modelo lineal simplificado} con las mismas ganancias, pero s\'i el robot real
+($0.30$--$0.36^\circ$): el modelo lineal no captura el amortiguamiento mec\'anico
+ni la din\'amica del giroscopio, por lo que la planta real es m\'as tolerante.
+Este resultado ilustra que la coincidencia sim/hardware es parcial y depende de la
+sensibilidad de cada m\'etodo al modelo. Adem\'as, se evidenci\'o que la cascada
+por \emph{cancelaci\'on} del polo inestable es inviable (internamente inestable) y
+que su versi\'on por \emph{colocaci\'on} de polos es la correcta.
+
+\section{Conclusiones}
+Sobre una misma planta y hardware se dise\~naron, implementaron y compararon seis
+controladores para un veh\'iculo uniaxial tipo p\'endulo invertido. Todos
+estabilizan con error sub-grado; el control en cascada por colocaci\'on de polos
+ofreci\'o el mejor compromiso desempe\~no/esfuerzo. La metodolog\'ia uniforme de
+extracci\'on de datos permiti\'o una comparaci\'on objetiva y evidenci\'o los
+l\'imites del modelo lineal para los controladores m\'as sensibles.
+
+\begin{thebibliography}{00}
+\bibitem{ogata} K. Ogata, \textit{Ingenier\'ia de Control Moderna}, 5\textsuperscript{a} ed. Madrid: Pearson, 2010.
+\bibitem{astrom} K. J. \r{A}str\"om and R. M. Murray, \textit{Feedback Systems: An Introduction for Scientists and Engineers}. Princeton Univ.\ Press, 2008.
+\bibitem{skogestad} S. Skogestad and I. Postlethwaite, \textit{Multivariable Feedback Control: Analysis and Design}, 2\textsuperscript{nd} ed. Wiley, 2005.
+\bibitem{monje} C. A. Monje \textit{et al.}, \textit{Fractional-order Systems and Controls}. Springer, 2010.
+\end{thebibliography}
+
+\end{document}
