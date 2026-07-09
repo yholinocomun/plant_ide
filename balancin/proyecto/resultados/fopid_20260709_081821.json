@@ -1,0 +1,23 @@
+{
+  "duracion_s": 25.0,
+  "theta_RMS_deg": 0.356,
+  "theta_std_deg": 0.395,
+  "theta_max_abs_deg": 1.06,
+  "theta_medio_deg": -0.037,
+  "u_max_abs_pwm": 53.0,
+  "u_RMS_pwm": 17.1,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": 0.003,
+  "muestras": 1251,
+  "controlador": "fopid",
+  "nombre": "PID Fraccionario",
+  "ganancias": {
+    "Kp": 45.0,
+    "Ki": 12.0,
+    "Kd": 2.5,
+    "lambda": 0.95,
+    "mu": 0.15
+  },
+  "tipo": "HW",
+  "fecha": "20260709_081821"
+}

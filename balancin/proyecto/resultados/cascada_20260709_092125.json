@@ -1,0 +1,24 @@
+{
+  "duracion_s": 25.0,
+  "theta_RMS_deg": 0.189,
+  "theta_std_deg": 0.217,
+  "theta_max_abs_deg": 0.94,
+  "theta_medio_deg": 0.004,
+  "u_max_abs_pwm": 32.0,
+  "u_RMS_pwm": 4.8,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": 0.008,
+  "muestras": 1251,
+  "controlador": "cascada",
+  "nombre": "Cascada (colocacion polos)",
+  "ganancias": {
+    "K2": -20.33,
+    "KC": 1.19,
+    "alpha": 10.2314,
+    "CASGAIN": 4.0,
+    "T22": 0.05,
+    "T11": 0.5
+  },
+  "tipo": "HW",
+  "fecha": "20260709_092125"
+}

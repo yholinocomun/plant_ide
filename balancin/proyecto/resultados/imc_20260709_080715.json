@@ -1,0 +1,22 @@
+{
+  "duracion_s": 24.98,
+  "theta_RMS_deg": 0.326,
+  "theta_std_deg": 0.332,
+  "theta_max_abs_deg": 1.08,
+  "theta_medio_deg": -0.029,
+  "u_max_abs_pwm": 43.0,
+  "u_RMS_pwm": 12.0,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": 0.038,
+  "muestras": 1250,
+  "controlador": "imc",
+  "nombre": "IMC (filtro Q)",
+  "ganancias": {
+    "K_ANG": 43.5,
+    "K_GYRO": 3.1,
+    "LAMBDA": 0.01,
+    "GAIN": 0.75
+  },
+  "tipo": "HW",
+  "fecha": "20260709_080715"
+}

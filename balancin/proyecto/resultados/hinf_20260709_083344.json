@@ -1,0 +1,21 @@
+{
+  "duracion_s": 25.0,
+  "theta_RMS_deg": 0.409,
+  "theta_std_deg": 0.387,
+  "theta_max_abs_deg": 1.83,
+  "theta_medio_deg": -0.099,
+  "u_max_abs_pwm": 150.0,
+  "u_RMS_pwm": 27.1,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": 0.008,
+  "muestras": 1251,
+  "controlador": "hinf",
+  "nombre": "H-infinito",
+  "ganancias": {
+    "orden": 6,
+    "HGAIN": 0.1,
+    "C_ctrl": "x (salida 1)"
+  },
+  "tipo": "HW",
+  "fecha": "20260709_083344"
+}

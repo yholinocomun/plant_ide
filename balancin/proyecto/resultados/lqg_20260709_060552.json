@@ -1,0 +1,24 @@
+{
+  "duracion_s": 25.0,
+  "theta_RMS_deg": 0.312,
+  "theta_std_deg": 0.315,
+  "theta_max_abs_deg": 1.29,
+  "theta_medio_deg": -0.012,
+  "u_max_abs_pwm": 91.0,
+  "u_RMS_pwm": 21.6,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": -0.004,
+  "muestras": 1251,
+  "controlador": "lqg",
+  "nombre": "LQG (Kalman)",
+  "ganancias": {
+    "K": [
+      -70.71,
+      -196.97,
+      -1985.22,
+      -284.52
+    ]
+  },
+  "tipo": "HW",
+  "fecha": "20260709_060552"
+}

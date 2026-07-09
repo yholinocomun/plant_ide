@@ -1,0 +1,22 @@
+{
+  "duracion_s": 25.0,
+  "theta_RMS_deg": 0.234,
+  "theta_std_deg": 0.227,
+  "theta_max_abs_deg": 1.09,
+  "theta_medio_deg": -0.055,
+  "u_max_abs_pwm": 83.0,
+  "u_RMS_pwm": 18.1,
+  "saturacion_pct": 0.0,
+  "deriva_x_m": 0.019,
+  "muestras": 1251,
+  "controlador": "lqr",
+  "nombre": "LQR (pre-gain)",
+  "ganancias": {
+    "Kang_p": 59.5,
+    "Kang_d": 1.7,
+    "Kpos_p": 30.36,
+    "Kpos_d": 61.09
+  },
+  "tipo": "HW",
+  "fecha": "20260709_074337"
+}

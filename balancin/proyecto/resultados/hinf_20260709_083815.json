@@ -1,0 +1,12 @@
+{
+  "error": "pocas muestras",
+  "controlador": "hinf",
+  "nombre": "H-infinito",
+  "ganancias": {
+    "orden": 6,
+    "HGAIN": 0.1,
+    "C_ctrl": "x (salida 1)"
+  },
+  "tipo": "HW",
+  "fecha": "20260709_083815"
+}
