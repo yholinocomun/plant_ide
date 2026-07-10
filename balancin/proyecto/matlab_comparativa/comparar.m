@@ -38,8 +38,8 @@ nombres = containers.Map({'lqr','lqg','cascada','fopid','imc','hinf'}, ...
 f=figure('Color','w','Position',[100 100 720 540]);
 
 ax1=subplot(2,1,1); hold on; grid on;
-plot(t_s, th_s, 'b-', 'LineWidth',1.9);
-if ~isempty(th_h), plot(t_h, th_h, 'r-', 'LineWidth',1.0); end
+plot(t_s, th_s, '-', 'Color',[0.10 0.20 0.45], 'LineWidth',1.8);
+if ~isempty(th_h), plot(t_h, th_h, '-', 'Color',[0.70 0.25 0.10], 'LineWidth',1.0); end
 yline(0,'--k','HandleVisibility','off');
 ylabel('\theta [deg]','FontSize',11);
 title([nombres(slug) ' : Simulacion vs Hardware'],'FontSize',12,'Interpreter','tex');
@@ -52,8 +52,8 @@ text(xl(1)+0.02*range(xl), yl(2)-0.05*range(yl), txt, 'VerticalAlignment','top',
      'FontSize',8.5,'BackgroundColor','w','EdgeColor',[.4 .4 .4],'Margin',3);
 
 ax2=subplot(2,1,2); hold on; grid on;
-plot(t_s, u_s, 'b-', 'LineWidth',1.9);
-if ~isempty(u_h), plot(t_h, u_h, 'r-', 'LineWidth',1.0); end
+plot(t_s, u_s, '-', 'Color',[0.10 0.20 0.45], 'LineWidth',1.8);
+if ~isempty(u_h), plot(t_h, u_h, '-', 'Color',[0.70 0.25 0.10], 'LineWidth',1.0); end
 ylabel('u [PWM]','FontSize',11); xlabel('t [s]','FontSize',11);
 legend('Simulacion','Hardware','Location','northeast','Interpreter','tex');
 linkaxes([ax1 ax2],'x');
