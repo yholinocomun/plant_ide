@@ -7,7 +7,7 @@ function comparar(slug)
 % - Grafica y guarda la comparativa sim vs hardware -> <slug>_comparativa.png
 % - Imprime metricas (theta_RMS, |theta|max, |u|max) de ambos.
 
-if nargin<1, slug='lqr'; end
+if nargin<1, slug='hinf'; end
 here   = fileparts(mfilename('fullpath'));
 resdir = fullfile(here,'..','resultados');
 outdir = here;
