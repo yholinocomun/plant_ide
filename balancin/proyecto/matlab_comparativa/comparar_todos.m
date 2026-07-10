@@ -1,6 +1,5 @@
-% Corre la comparativa sim-vs-hardware para los 6 controladores.
-ctrls = {'lqr','lqg','cascada','fopid','imc','hinf'};
-for i=1:numel(ctrls)
-    comparar(ctrls{i});
-end
-disp('Listo: <slug>_sim.png y <slug>_comparativa.png para cada controlador.');
+% Corre la comparativa IEEE sim-vs-hardware para todos los controladores.
+% Genera una sola imagen con DOS graficas: simulacion y hardware superpuestos,
+% mas metricas visibles para el paper.
+comparar('todos');
+disp('Listo: resultados/comparativa_ieee_matlab.png y resultados/tabla_comparativa_matlab.csv');
